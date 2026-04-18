@@ -58,7 +58,7 @@ export const applyWatermarkToBlob = async (
           y: canvas.height * 0.5, 
           sizeScale: 0.04, 
           weight: '400', 
-          text: `  ${userText}  `,
+          text: userText,
           opacity: 0.15,
           letterSpacing: '8px'
         },
