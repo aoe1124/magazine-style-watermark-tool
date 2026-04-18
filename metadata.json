@@ -1,0 +1,6 @@
+{
+  "name": "Magazine Style Watermark Tool",
+  "description": "A tool to batch apply magazine-style text watermarks to images, with preview, compression, and zip download capabilities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
