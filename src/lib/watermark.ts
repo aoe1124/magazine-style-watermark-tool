@@ -35,7 +35,7 @@ export const applyWatermarkToBlob = async (
       
       // Add a slight dark shadow so it shows up on light backgrounds too
       // opacity scaled slightly relative to user control to maintain softness
-      ctx.shadowColor = `rgba(0, 0, 0, ${0.3 * options.opacityMultiplier})`;
+      ctx.shadowColor = `rgba(0, 0, 0, ${Math.min(1, 0.3 * options.opacityMultiplier)})`;
       ctx.shadowBlur = 4;
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
@@ -56,7 +56,7 @@ export const applyWatermarkToBlob = async (
         // Middle watermark
         { 
           y: canvas.height * 0.5, 
-          sizeScale: 0.06, 
+          sizeScale: 0.04, 
           weight: '400', 
           text: `—  ${userText}  —`,
           opacity: 0.15,
@@ -77,20 +77,29 @@ export const applyWatermarkToBlob = async (
         // Calculate font size relative to image height to keep it proportional, scaled by user setting
         let fontSize = canvas.height * pos.sizeScale * options.scale;
         // Put reasonable bound limits
-        fontSize = Math.max(12, Math.min(fontSize, 400));
+        fontSize = Math.min(fontSize, 600);
         
         // Use a clean, modern sans-serif that renders Chinese beautifully
         ctx.font = `${pos.weight} ${fontSize}px "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`;
         
-        const finalOpacity = Math.min(1, pos.opacity * options.opacityMultiplier);
-        ctx.fillStyle = `rgba(255, 255, 255, ${finalOpacity})`;
-        
         // Emulate simple letter-spacing via canvas state if environment supports it
         (ctx as any).letterSpacing = pos.letterSpacing;
 
+        // Auto-shrink font if it exceeds the image width (common on vertical/narrow photos)
+        const maxTextWidth = canvas.width * 0.9;
+        let metrics = ctx.measureText(pos.text);
+        if (metrics.width > maxTextWidth) {
+          const ratio = maxTextWidth / metrics.width;
+          fontSize = fontSize * ratio;
+          ctx.font = `${pos.weight} ${fontSize}px "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`;
+        }
+
+        const finalOpacity = Math.max(0, Math.min(1, pos.opacity * options.opacityMultiplier));
+        ctx.fillStyle = `rgba(255, 255, 255, ${finalOpacity})`;
+        
         ctx.save();
         ctx.translate(canvas.width / 2, pos.y);
-        ctx.fillText(pos.text, 0, 0);
+        ctx.fillText(pos.text, 0, 0, maxTextWidth); // Native compress fallback
         ctx.restore();
       }
 
