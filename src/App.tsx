@@ -1,9 +1,17 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Upload, Download, Trash2, Settings, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { Check, Plus, Pencil, Trash2, Upload, Loader2, X } from 'lucide-react';
 
 import JSZip from 'jszip';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { applyWatermarkToBlob } from './lib/watermark';
+import {
+  addWatermarkPreset,
+  DEFAULT_WATERMARK_PRESETS,
+  removeWatermarkPreset,
+  sanitizeWatermarkPresets,
+  updateWatermarkPreset,
+  WATERMARK_PRESETS_STORAGE_KEY,
+} from './lib/watermarkPresets';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface UploadedImage {
@@ -18,11 +26,19 @@ export default function App() {
   const [storedQuality, setStoredQuality] = useLocalStorage('watermark_quality', 0.8);
   const [storedScale, setStoredScale] = useLocalStorage('watermark_scale', 1.0);
   const [storedOpacity, setStoredOpacity] = useLocalStorage('watermark_opacity', 1.0);
+  const [storedPresets, setStoredPresets] = useLocalStorage<string[]>(
+    WATERMARK_PRESETS_STORAGE_KEY,
+    DEFAULT_WATERMARK_PRESETS
+  );
   
   const [textInput, setTextInput] = useState(storedText);
   const [qualityInput, setQualityInput] = useState(storedQuality);
   const [scaleInput, setScaleInput] = useState(storedScale);
   const [opacityInput, setOpacityInput] = useState(storedOpacity);
+  const [presetDraft, setPresetDraft] = useState('');
+  const [isPresetManagerOpen, setIsPresetManagerOpen] = useState(false);
+  const [editingPresetIndex, setEditingPresetIndex] = useState<number | null>(null);
+  const [editingPresetText, setEditingPresetText] = useState('');
   
   const [debouncedText, setDebouncedText] = useState(storedText);
   const [debouncedQuality, setDebouncedQuality] = useState(storedQuality);
@@ -37,6 +53,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDraggingOverRef = useRef(false);
   const [dragActive, setDragActive] = useState(false);
+  const watermarkPresets = sanitizeWatermarkPresets(storedPresets);
 
   // Debounce Text and Quality changes
   useEffect(() => {
@@ -145,6 +162,46 @@ export default function App() {
     });
   };
 
+  const handleAddPreset = () => {
+    const nextPresets = addWatermarkPreset(watermarkPresets, presetDraft);
+    setStoredPresets(nextPresets);
+    setPresetDraft('');
+  };
+
+  const handleStartEditPreset = (index: number) => {
+    setEditingPresetIndex(index);
+    setEditingPresetText(watermarkPresets[index] ?? '');
+  };
+
+  const handleSavePresetEdit = () => {
+    if (editingPresetIndex === null) return;
+
+    const currentPreset = watermarkPresets[editingPresetIndex];
+    const nextPresets = updateWatermarkPreset(
+      watermarkPresets,
+      editingPresetIndex,
+      editingPresetText
+    );
+    setStoredPresets(nextPresets);
+    if (currentPreset === textInput && nextPresets[editingPresetIndex]) {
+      setTextInput(nextPresets[editingPresetIndex]);
+    }
+    setEditingPresetIndex(null);
+    setEditingPresetText('');
+  };
+
+  const handleCancelPresetEdit = () => {
+    setEditingPresetIndex(null);
+    setEditingPresetText('');
+  };
+
+  const handleRemovePreset = (index: number) => {
+    setStoredPresets(removeWatermarkPreset(watermarkPresets, index));
+    if (editingPresetIndex === index) {
+      handleCancelPresetEdit();
+    }
+  };
+
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -201,16 +258,145 @@ export default function App() {
         <div className="flex-1 overflow-y-auto space-y-6">
           
           <div className="flex flex-col gap-2">
-            <label className="text-[11px] uppercase tracking-[1px] font-bold text-[#888]">
+            <label htmlFor="watermark-text" className="text-[11px] uppercase tracking-[1px] font-bold text-[#888]">
               水印自定义文字
             </label>
             <input 
+              id="watermark-text"
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               className="w-full p-[12px] border border-editorial-border font-editorial-sans text-[14px] rounded-[4px] focus:outline-none focus:border-editorial-ink"
               placeholder="e.g. 公众号·子游小馆"
             />
+            <div className="flex flex-wrap gap-2">
+              {watermarkPresets.map((preset) => (
+                <button
+                  type="button"
+                  key={preset}
+                  onClick={() => setTextInput(preset)}
+                  className={`px-[10px] py-[7px] border text-[12px] rounded-[4px] transition-colors ${
+                    textInput === preset
+                      ? 'bg-editorial-ink text-white border-editorial-ink'
+                      : 'bg-white text-editorial-ink border-editorial-border hover:border-editorial-ink'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsPresetManagerOpen((open) => !open)}
+              className="self-start text-[11px] font-bold tracking-[1px] text-[#666] hover:text-editorial-ink"
+            >
+              管理选项
+            </button>
+            {isPresetManagerOpen && (
+              <div className="flex flex-col gap-2 border border-editorial-border rounded-[4px] p-[10px] bg-[#F9F8F6]">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={presetDraft}
+                    onChange={(e) => setPresetDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddPreset();
+                    }}
+                    className="min-w-0 flex-1 px-[10px] py-[8px] border border-editorial-border font-editorial-sans text-[12px] rounded-[4px] focus:outline-none focus:border-editorial-ink"
+                    placeholder="新增固定选项"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddPreset}
+                    disabled={!presetDraft.trim()}
+                    className="w-[36px] h-[36px] shrink-0 border border-editorial-border rounded-[4px] bg-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:border-editorial-ink"
+                    aria-label="增加水印选项"
+                    title="增加"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {watermarkPresets.length > 0 ? (
+                  <div className="flex flex-col gap-2">
+                    {watermarkPresets.map((preset, index) => (
+                      <div key={`${preset}-${index}`} className="flex items-center gap-2">
+                        {editingPresetIndex === index ? (
+                          <>
+                            <input
+                              aria-label={`修改 ${preset}`}
+                              type="text"
+                              value={editingPresetText}
+                              onChange={(e) => setEditingPresetText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSavePresetEdit();
+                                if (e.key === 'Escape') handleCancelPresetEdit();
+                              }}
+                              className="min-w-0 flex-1 px-[10px] py-[8px] border border-editorial-border font-editorial-sans text-[12px] rounded-[4px] focus:outline-none focus:border-editorial-ink"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSavePresetEdit}
+                              disabled={!editingPresetText.trim()}
+                              className="w-[32px] h-[32px] shrink-0 border border-editorial-border rounded-[4px] bg-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed hover:border-editorial-ink"
+                              aria-label="保存水印选项"
+                              title="保存"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelPresetEdit}
+                              className="w-[32px] h-[32px] shrink-0 border border-editorial-border rounded-[4px] bg-white flex items-center justify-center hover:border-editorial-ink"
+                              aria-label="取消编辑水印选项"
+                              title="取消"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setTextInput(preset)}
+                              className="min-w-0 flex-1 truncate text-left px-[10px] py-[8px] border border-editorial-border rounded-[4px] bg-white text-[12px] hover:border-editorial-ink"
+                            >
+                              {preset}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditPreset(index)}
+                              className="w-[32px] h-[32px] shrink-0 border border-editorial-border rounded-[4px] bg-white flex items-center justify-center hover:border-editorial-ink"
+                              aria-label={`编辑 ${preset}`}
+                              title="编辑"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePreset(index)}
+                              className="w-[32px] h-[32px] shrink-0 border border-editorial-border rounded-[4px] bg-white flex items-center justify-center hover:border-editorial-ink"
+                              aria-label={`删除 ${preset}`}
+                              title="删除"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setStoredPresets(DEFAULT_WATERMARK_PRESETS)}
+                    className="text-left text-[12px] font-bold text-editorial-ink"
+                  >
+                    恢复默认选项
+                  </button>
+                )}
+              </div>
+            )}
             <p className="text-[11px] text-[#999] italic mt-[4px]">
               系统会自动将该文本融入顶底两端的装饰性版权说明中。
             </p>
@@ -432,4 +618,3 @@ export default function App() {
     </div>
   );
 }
-
