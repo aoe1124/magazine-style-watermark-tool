@@ -13,3 +13,9 @@ test('renders default watermark text presets below the custom text input', () =>
 
   assert.match(html, /管理选项/);
 });
+
+test('renders a top-right clear images button', () => {
+  const html = renderToStaticMarkup(<App />);
+
+  assert.match(html, /清空图片/);
+});

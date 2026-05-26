@@ -162,6 +162,15 @@ export default function App() {
     });
   };
 
+  const handleClearImages = () => {
+    setImages(prev => {
+      prev.forEach((img) => {
+        if (img.previewUrl) URL.revokeObjectURL(img.previewUrl);
+      });
+      return [];
+    });
+  };
+
   const handleAddPreset = () => {
     const nextPresets = addWatermarkPreset(watermarkPresets, presetDraft);
     setStoredPresets(nextPresets);
@@ -490,8 +499,18 @@ export default function App() {
         
         <div className="bg-white px-[32px] py-[12px] border-b border-editorial-border flex justify-between items-center shrink-0">
           <div className="text-[12px] text-[#666]">实时效果预览区</div>
-          <div className="flex gap-[16px]">
+          <div className="flex items-center gap-[12px]">
             <span className="text-[12px] text-[#666] uppercase tracking-[1px] font-bold">已上传：{images.length} 张</span>
+            <button
+              type="button"
+              onClick={handleClearImages}
+              disabled={images.length === 0}
+              className="h-[32px] px-[10px] border border-editorial-border bg-white text-editorial-ink rounded-[4px] text-[11px] font-bold tracking-[1px] flex items-center gap-[6px] hover:border-editorial-ink disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-editorial-border"
+              title="清空图片"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              清空图片
+            </button>
           </div>
         </div>
 
