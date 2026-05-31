@@ -7,10 +7,13 @@ import { applyWatermarkToBlob } from './lib/watermark';
 import {
   addWatermarkPreset,
   DEFAULT_WATERMARK_PRESETS,
+  migrateWatermarkPresets,
   removeWatermarkPreset,
   sanitizeWatermarkPresets,
   updateWatermarkPreset,
+  WATERMARK_PRESETS_CURRENT_VERSION,
   WATERMARK_PRESETS_STORAGE_KEY,
+  WATERMARK_PRESETS_VERSION_STORAGE_KEY,
 } from './lib/watermarkPresets';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -29,6 +32,10 @@ export default function App() {
   const [storedPresets, setStoredPresets] = useLocalStorage<string[]>(
     WATERMARK_PRESETS_STORAGE_KEY,
     DEFAULT_WATERMARK_PRESETS
+  );
+  const [storedPresetVersion, setStoredPresetVersion] = useLocalStorage(
+    WATERMARK_PRESETS_VERSION_STORAGE_KEY,
+    1
   );
   
   const [textInput, setTextInput] = useState(storedText);
@@ -54,6 +61,15 @@ export default function App() {
   const isDraggingOverRef = useRef(false);
   const [dragActive, setDragActive] = useState(false);
   const watermarkPresets = sanitizeWatermarkPresets(storedPresets);
+
+  useEffect(() => {
+    if (storedPresetVersion >= WATERMARK_PRESETS_CURRENT_VERSION) return;
+
+    setStoredPresets((currentPresets) =>
+      migrateWatermarkPresets(currentPresets, storedPresetVersion)
+    );
+    setStoredPresetVersion(WATERMARK_PRESETS_CURRENT_VERSION);
+  }, [storedPresetVersion, setStoredPresets, setStoredPresetVersion]);
 
   // Debounce Text and Quality changes
   useEffect(() => {

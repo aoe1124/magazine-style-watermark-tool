@@ -7,7 +7,7 @@ import App from './App';
 test('renders default watermark text presets below the custom text input', () => {
   const html = renderToStaticMarkup(<App />);
 
-  for (const label of ['养心美学馆', '子游小馆', '秘藏智慧', 'AI之门', '智驾大白话']) {
+  for (const label of ['养心美学馆', '子游小馆', '秘藏智慧', 'AI之门', '智驾大白话', '暮色与松香']) {
     assert.match(html, new RegExp(label));
   }
 

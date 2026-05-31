@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   addWatermarkPreset,
   DEFAULT_WATERMARK_PRESETS,
+  migrateWatermarkPresets,
   removeWatermarkPreset,
   sanitizeWatermarkPresets,
   updateWatermarkPreset,
@@ -25,4 +26,10 @@ test('adds, updates, and removes watermark presets without blank or duplicate en
   assert.deepEqual(updateWatermarkPreset(['A', 'B'], 3, 'C'), ['A', 'B']);
 
   assert.deepEqual(removeWatermarkPreset(['A', 'B', 'C'], 1), ['A', 'C']);
+});
+
+test('migrates existing stored presets by appending the newest default once', () => {
+  assert.deepEqual(migrateWatermarkPresets(['子游小馆'], 1), ['子游小馆', '暮色与松香']);
+  assert.deepEqual(migrateWatermarkPresets(['子游小馆', '暮色与松香'], 1), ['子游小馆', '暮色与松香']);
+  assert.deepEqual(migrateWatermarkPresets(['子游小馆'], 2), ['子游小馆']);
 });
