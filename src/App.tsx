@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Check, Plus, Pencil, Trash2, Upload, Loader2, X } from 'lucide-react';
+import { Check, Plus, Pencil, SlidersHorizontal, Trash2, Upload, Loader2, X } from 'lucide-react';
 
 import JSZip from 'jszip';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -313,12 +313,19 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsPresetManagerOpen((open) => !open)}
-              className="self-start text-[11px] font-bold tracking-[1px] text-[#666] hover:text-editorial-ink"
+              aria-expanded={isPresetManagerOpen}
+              aria-controls="watermark-preset-manager"
+              className={`w-full h-[40px] px-[12px] border rounded-[4px] text-[12px] font-bold tracking-[1px] inline-flex items-center justify-center gap-[8px] transition-colors ${
+                isPresetManagerOpen
+                  ? 'bg-editorial-ink text-white border-editorial-ink'
+                  : 'bg-white text-editorial-ink border-editorial-border hover:border-editorial-ink hover:bg-[#F9F8F6]'
+              }`}
             >
-              管理选项
+              <SlidersHorizontal className="w-4 h-4" />
+              管理水印选项
             </button>
             {isPresetManagerOpen && (
-              <div className="flex flex-col gap-2 border border-editorial-border rounded-[4px] p-[10px] bg-[#F9F8F6]">
+              <div id="watermark-preset-manager" className="flex flex-col gap-2 border border-editorial-border rounded-[4px] p-[10px] bg-[#F9F8F6]">
                 <div className="flex gap-2">
                   <input
                     type="text"

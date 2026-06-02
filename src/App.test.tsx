@@ -11,7 +11,7 @@ test('renders default watermark text presets below the custom text input', () =>
     assert.match(html, new RegExp(label));
   }
 
-  assert.match(html, /管理选项/);
+  assert.match(html, /管理水印选项/);
 });
 
 test('renders a top-right clear images button', () => {
