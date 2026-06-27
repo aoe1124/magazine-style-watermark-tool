@@ -5,6 +5,65 @@ export interface WatermarkOptions {
   opacityMultiplier: number; // For adjusting opacity multiplier
 }
 
+export interface WatermarkLayoutSpec {
+  y: number;
+  sizeScale: number;
+  weight: string;
+  text: string;
+  opacity: number;
+  letterSpacing: string;
+}
+
+const DEFAULT_WATERMARK_TEXT = '公众号·子游小馆';
+
+const getWatermarkText = (text: string) => text.trim() || DEFAULT_WATERMARK_TEXT;
+
+const formatPublicAccountText = (text: string) => {
+  const normalizedText = getWatermarkText(text);
+  return normalizedText.startsWith('公众号')
+    ? normalizedText
+    : `公众号·${normalizedText}`;
+};
+
+export const buildWatermarkLayout = ({
+  height,
+  userText,
+}: {
+  width: number;
+  height: number;
+  userText: string;
+}): WatermarkLayoutSpec[] => {
+  const centerText = getWatermarkText(userText);
+  const publicAccountText = formatPublicAccountText(centerText);
+
+  return [
+    {
+      y: Math.max(height * 0.04, 30),
+      sizeScale: 0.016,
+      weight: '500',
+      text: `ORIGINAL WORK © · ${publicAccountText} · ALL RIGHTS RESERVED`,
+      opacity: 0.4,
+      letterSpacing: '3px',
+    },
+    {
+      y: height * 0.5,
+      sizeScale: 0.04,
+      weight: '400',
+      text: centerText,
+      opacity: 0.22,
+      letterSpacing: '8px',
+    },
+    {
+      y: Math.min(height * 0.96, height - 30),
+      sizeScale: 0.014,
+      weight: '500',
+      text: `ORIGINAL CREATION BY ${publicAccountText}  //  DIGITAL ARCHIVE`,
+      opacity: 0.4,
+      letterSpacing: '3px',
+    },
+  ];
+};
+
 export const applyWatermarkToBlob = async (
   imageFile: File,
   options: WatermarkOptions
@@ -40,38 +99,12 @@ export const applyWatermarkToBlob = async (
       ctx.shadowOffsetX = 1;
       ctx.shadowOffsetY = 1;
 
-      const userText = options.text.trim() || '公众号·子游小馆';
-
       // Draw text at 3 positions: Top, Middle, Bottom
-      const watermarks = [
-        // Top watermark
-        { 
-          y: Math.max(canvas.height * 0.04, 30), 
-          sizeScale: 0.016, 
-          weight: '500', 
-          text: `ORIGINAL WORK © · ${userText} · ALL RIGHTS RESERVED`,
-          opacity: 0.4,
-          letterSpacing: '3px'
-        }, 
-        // Middle watermark
-        { 
-          y: canvas.height * 0.5, 
-          sizeScale: 0.04, 
-          weight: '400', 
-          text: userText,
-          opacity: 0.15,
-          letterSpacing: '8px'
-        },
-        // Bottom watermark
-        { 
-          y: Math.min(canvas.height * 0.96, canvas.height - 30), 
-          sizeScale: 0.014, 
-          weight: '500', 
-          text: `ORIGINAL CREATION BY ${userText}  //  DIGITAL ARCHIVE`,
-          opacity: 0.4,
-          letterSpacing: '3px'
-        },
-      ];
+      const watermarks = buildWatermarkLayout({
+        width: canvas.width,
+        height: canvas.height,
+        userText: options.text,
+      });
 
       for (const pos of watermarks) {
         // Calculate font size relative to image height to keep it proportional, scaled by user setting
